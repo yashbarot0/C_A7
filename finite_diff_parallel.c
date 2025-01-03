@@ -7,8 +7,8 @@
 #include <semaphore.h>
 #include <time.h>
 
-#define NX 4000
-#define T_FINAL 0.2
+#define NX 1000
+#define T_FINAL 0.1
 #define PI 3.141592653589793
 
 sem_t *semaphore;
@@ -16,10 +16,12 @@ sem_t *semaphore;
 void solve_half(double *u, double dx, double dt, int start, int end, int NT) {
     for (int t = 0; t < NT; ++t) {
         for (int i = start; i < end; ++i) {
-            u[i] = 0.5 * (u[i + 1] + u[i - 1]);
+            if (i > 0 && i < NX) {
+                u[i] = 0.5 * (u[i + 1] + u[i - 1]);
+            }
         }
-        sem_post(&semaphore[start]);
-        sem_wait(&semaphore[end]);
+        sem_post(&semaphore[start == 1 ? 0 : 1]);  
+        sem_wait(&semaphore[start == 1 ? 1 : 0]);  
     }
 }
 
@@ -48,9 +50,12 @@ int main() {
     if (pid == 0) {
         solve_half(u, dx, dt, 1, NX/2, NT);
         exit(0);
-    } else {
+    } else if (pid > 0) {
         solve_half(u, dx, dt, NX/2, NX, NT);
         wait(NULL);
+    } else {
+        perror("Fork failed");
+        exit(1);
     }
 
     clock_t end_time = clock();
